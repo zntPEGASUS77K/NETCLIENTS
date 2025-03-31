@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.netclient.frontend.ClientController" spacing="20" alignment="CENTER"
+      style="-fx-background-color: linear-gradient(to bottom, #e0f7fa, #b2ebf2); -fx-padding: 20;"
+      stylesheets="@/com/netclient/frontend/styles/styles.css">
+  <children>
+    <Label text="Gestion des Clients" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #00695c;"/>
+
+    <HBox spacing="10" alignment="CENTER">
+      <Button onAction="#openAddClientModal" text="+" style="-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 8 16;"/>
+      <Button text="Modifier" onAction="#handleUpdateClient" style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 16;"/>
+      <Button text="Supprimer" onAction="#handleDeleteClient" style="-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 16;"/>
+    </HBox>
+
+    <TableView fx:id="clientTable" style="-fx-border-color: #00695c; -fx-border-radius: 5; -fx-background-color: white;">
+      <columns>
+        <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
+        <TableColumn fx:id="nameColumn" text="Nom" prefWidth="150"/>
+        <TableColumn fx:id="addressColumn" text="Adresse" prefWidth="200"/>
+        <TableColumn fx:id="balanceColumn" text="Solde" prefWidth="100"/>
+      </columns>
+    </TableView>
+    <Label fx:id="statusLabel" text="Statut: Déconnecté" style="-fx-font-size: 14px; -fx-text-fill: #00695c;"/>
+  </children>
+</VBox>
