@@ -1,11 +1,12 @@
 package com.netclient.netclient.services;
 
+import com.netclient.netclient.config.TcpServer;
 import com.netclient.netclient.entity.Client;
 import com.netclient.netclient.exception.ResourcesNotFoundException;
 import com.netclient.netclient.model.ClientDTO;
 import com.netclient.netclient.repository.ClientRepository;
 import org.springframework.stereotype.Service;
-
+import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,6 +17,11 @@ public class ClientService {
 
     public ClientService(ClientRepository clientRepository) {
         this.clientRepository = clientRepository;
+    }
+
+    @PostConstruct
+    public void init() {
+        new TcpServer(this);
     }
 
     public ClientDTO createClient(ClientDTO clientDTO) {

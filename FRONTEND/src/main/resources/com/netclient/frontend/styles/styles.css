@@ -10,3 +10,6 @@
     -fx-border-radius: 5;
     -fx-border-color: #00695c;
 }
+.text-field.error {
+    -fx-border-color: red;
+}

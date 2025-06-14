@@ -6,30 +6,60 @@ import java.net.InetAddress;
 
 public class NetworkManager {
     private final ClientController controller;
-    private boolean networkAvailable;
+    private volatile boolean networkAvailable;
 
     public NetworkManager(ClientController controller) {
         this.controller = controller;
+        networkAvailable = false;
+        checkNetworkStatus();
     }
 
     public void checkNetworkStatus() {
         new Thread(() -> {
             while (true) {
+                boolean isAvailable;
                 try {
-                    InetAddress.getByName("google.com").isReachable(2000);
-                    networkAvailable = true;
-                    Platform.runLater(() -> controller.updateStatus("Réseau disponible"));
+                    isAvailable = InetAddress.getByName("google.com").isReachable(1000);
+                    updateNetworkStatus(isAvailable);
                 } catch (Exception e) {
-                    networkAvailable = false;
-                    Platform.runLater(() -> controller.updateStatus("Réseau indisponible"));
+                    isAvailable = false;
+                    updateNetworkStatus(false);
                 }
+
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(2000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    break;
                 }
             }
         }).start();
+    }
+
+    public void forceOffline() {
+        updateNetworkStatus(false);
+    }
+
+    public void checkReconnection() {
+        try {
+            boolean isAvailable = InetAddress.getByName("google.com").isReachable(1000);
+            updateNetworkStatus(isAvailable);
+        } catch (Exception e) {
+            updateNetworkStatus(false);
+        }
+    }
+
+    private void updateNetworkStatus(boolean isAvailable) {
+        if (networkAvailable != isAvailable) {
+            networkAvailable = isAvailable;
+            Platform.runLater(() -> {
+                controller.updateStatus(isAvailable ? "Réseau disponible" : "Réseau indisponible");
+                controller.updateNetworkIndicator(isAvailable);
+                if (isAvailable) {
+                    controller.syncPendingClients();
+                }
+            });
+        }
     }
 
     public boolean isNetworkAvailable() {

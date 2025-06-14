@@ -10,41 +10,51 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.io.*;
+import java.net.Socket;
 import java.util.List;
+import java.util.Map;
 
-public class WebSocketClient {
+public class TcpClient {
     private final ClientController controller;
-    private WebSocketSession session;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final CloseableHttpClient httpClient = HttpClients.createDefault();
+    private static final String SERVER_HOST = "localhost";
+    private static final int SERVER_PORT = 9090;
     private static final String API_BASE_URL = "http://localhost:8078/api/v1/clients";
 
-    public WebSocketClient(ClientController controller) {
+    public TcpClient(ClientController controller) {
         this.controller = controller;
-        connect();
+        fetchAllClients();
     }
 
-    private void connect() {
-        StandardWebSocketClient client = new StandardWebSocketClient();
-        client.doHandshake(new CustomWebSocketHandler(), "ws://localhost:8078/client");
-    }
+    public boolean sendOperation(String operation, ClientDTO client) {
+        try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
+             OutputStream out = socket.getOutputStream();
+             InputStream in = socket.getInputStream()) {
 
-    public void sendClientData(ClientDTO client) {
-        try {
-            if (session != null && session.isOpen()) {
-                String json = objectMapper.writeValueAsString(client);
-                session.sendMessage(new TextMessage(json));
-            } else {
-                controller.updateStatus("Erreur: Session WebSocket non connectée");
-            }
-        } catch (Exception e) {
+            Map<String, Object> data = Map.of("operation", operation, "client", client);
+            String json = objectMapper.writeValueAsString(data);
+            out.write(json.getBytes());
+            out.flush();
+
+            byte[] buffer = new byte[1024];
+            int bytesRead = in.read(buffer);
+            String response = new String(buffer, 0, bytesRead);
+
+            controller.updateStatus(response);
+
+            // Correction ici : prendre en compte "supprimé" comme réponse valide
+            String lowerResponse = response.toLowerCase();
+            return lowerResponse.contains("modifié") ||
+                    lowerResponse.contains("reçues") ||
+                    lowerResponse.contains("supprimé") ||
+                    lowerResponse.contains("supprimée");
+
+        } catch (IOException e) {
             controller.updateStatus("Erreur lors de l'envoi: " + e.getMessage());
+            return false;
         }
     }
 
@@ -55,6 +65,7 @@ public class WebSocketClient {
                 int statusCode = response.getStatusLine().getStatusCode();
                 if (statusCode == 200) {
                     controller.updateStatus("Enregistrement supprimé");
+                    fetchAllClients();
                 } else {
                     controller.updateStatus("Erreur lors de la suppression: " + statusCode);
                 }
@@ -70,10 +81,12 @@ public class WebSocketClient {
             request.setHeader("Content-Type", "application/json");
             String json = objectMapper.writeValueAsString(client);
             request.setEntity(new StringEntity(json));
+
             try (CloseableHttpResponse response = httpClient.execute(request)) {
                 int statusCode = response.getStatusLine().getStatusCode();
                 if (statusCode == 200) {
                     controller.updateStatus("Enregistrement modifié");
+                    fetchAllClients();
                 } else {
                     controller.updateStatus("Erreur lors de la mise à jour: " + statusCode);
                 }
@@ -83,7 +96,25 @@ public class WebSocketClient {
         }
     }
 
-    public List<ClientDTO> getAllClients() {
+    public void fetchAllClients() {
+        try {
+            HttpGet request = new HttpGet(API_BASE_URL);
+            try (CloseableHttpResponse response = httpClient.execute(request)) {
+                int statusCode = response.getStatusLine().getStatusCode();
+                if (statusCode == 200) {
+                    String json = EntityUtils.toString(response.getEntity());
+                    List<ClientDTO> clients = objectMapper.readValue(json, new TypeReference<List<ClientDTO>>() {});
+                    controller.updateClientTable(clients);
+                } else {
+                    controller.updateStatus("Erreur lors de la récupération: " + statusCode);
+                }
+            }
+        } catch (Exception e) {
+            controller.updateStatus("Erreur lors de la récupération: " + e.getMessage());
+        }
+    }
+
+    public List<ClientDTO> fetchAllClientsFromServer() {
         try {
             HttpGet request = new HttpGet(API_BASE_URL);
             try (CloseableHttpResponse response = httpClient.execute(request)) {
@@ -99,34 +130,6 @@ public class WebSocketClient {
         } catch (Exception e) {
             controller.updateStatus("Erreur lors de la récupération: " + e.getMessage());
             return List.of();
-        }
-    }
-
-    private class CustomWebSocketHandler extends TextWebSocketHandler {
-        @Override
-        public void afterConnectionEstablished(WebSocketSession session) {
-            WebSocketClient.this.session = session;
-            controller.updateStatus("Connecté au serveur");
-            List<ClientDTO> clients = getAllClients();
-            controller.updateClientTable(clients);
-        }
-
-        @Override
-        public void handleTextMessage(WebSocketSession session, TextMessage message) {
-            controller.updateStatus(message.getPayload());
-            List<ClientDTO> clients = getAllClients();
-            controller.updateClientTable(clients);
-        }
-
-        @Override
-        public void handleTransportError(WebSocketSession session, Throwable exception) {
-            controller.updateStatus("Erreur WebSocket: " + exception.getMessage());
-        }
-
-        @Override
-        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-            controller.updateStatus("Déconnecté du serveur");
-            WebSocketClient.this.session = null;
         }
     }
 }

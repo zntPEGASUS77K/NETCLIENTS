@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.netclient.frontend.ClientController" spacing="20" alignment="CENTER"
@@ -11,18 +12,22 @@
 
     <HBox spacing="10" alignment="CENTER">
       <Button onAction="#openAddClientModal" text="+" style="-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 8 16;"/>
-      <Button text="Modifier" onAction="#handleUpdateClient" style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 16;"/>
-      <Button text="Supprimer" onAction="#handleDeleteClient" style="-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 16;"/>
+      <Button text="Modifier" onAction="#openEditClientModal" style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 16;"/>
+      <Button fx:id="deleteButton" text="Supprimer" onAction="#cancelDeleteMode" style="-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8 16;"/>
     </HBox>
 
     <TableView fx:id="clientTable" style="-fx-border-color: #00695c; -fx-border-radius: 5; -fx-background-color: white;">
       <columns>
         <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
-        <TableColumn fx:id="nameColumn" text="Nom" prefWidth="150"/>
+        <TableColumn fx:id="nameColumn" text="Nom" prefWidth="250"/>
         <TableColumn fx:id="addressColumn" text="Adresse" prefWidth="200"/>
         <TableColumn fx:id="balanceColumn" text="Solde" prefWidth="100"/>
       </columns>
     </TableView>
-    <Label fx:id="statusLabel" text="Statut: Déconnecté" style="-fx-font-size: 14px; -fx-text-fill: #00695c;"/>
+
+    <HBox spacing="10" alignment="CENTER">
+      <Circle fx:id="networkIndicator" radius="8" fill="red"/>
+      <Label fx:id="statusLabel" text="Statut: Déconnecté" style="-fx-font-size: 14px; -fx-text-fill: #00695c;"/>
+    </HBox>
   </children>
 </VBox>
